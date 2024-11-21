@@ -181,6 +181,34 @@ require('lazy').setup({
   -- Then, because we use the `config` key, the configuration only runs
   -- after the plugin has been loaded:
   --  config = function() ... end
+  {
+    'smoka7/hop.nvim',
+    config = function()
+      local hop = require 'hop'
+      hop.setup()
+      local directions = require('hop.hint').HintDirection
+
+      vim.keymap.set('n', '<leader>w', function()
+        hop.hint_words { direction = directions.AFTER_CURSOR }
+      end, { desc = 'Hop [W]ord' })
+
+      vim.keymap.set('n', '<leader>b', function()
+        hop.hint_words { direction = directions.BEFORE_CURSOR }
+      end, { desc = 'Hop [B]ack word' })
+
+      vim.keymap.set('n', '<leader>k', function()
+        hop.hint_lines_skip_whitespace { direction = directions.BEFORE_CURSOR }
+      end, { desc = 'Hop Down Line [K]' })
+
+      vim.keymap.set('n', '<leader>j', function()
+        hop.hint_lines_skip_whitespace { direction = directions.AFTER_CURSOR }
+      end, { desc = 'Hop Up Line [J]' })
+
+      -- vim.keymap.set('n') '<leader>j', :HopLineStartAC<CR>
+      -- vim.keymap.set('n') '<leader>k', :HopLineStartBC<CR>
+      -- vim.keymap.set('n') '<leader>/', :HopPattern<CR>
+    end,
+  },
 
   { -- Useful plugin to show you pending keybinds.
     'folke/which-key.nvim',
@@ -253,6 +281,7 @@ require('lazy').setup({
           -- you can add other fields for setting up lsp server in this table
         }
       end
+
       require('ufo').setup()
       vim.o.foldcolumn = '1' -- '0' is not bad
       vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
@@ -260,8 +289,8 @@ require('lazy').setup({
       vim.o.foldenable = true
 
       -- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
-      vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
-      vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+      -- vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
+      -- vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
     end,
   },
 
