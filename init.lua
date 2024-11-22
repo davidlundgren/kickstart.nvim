@@ -115,6 +115,8 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   end,
 })
 
+vim.api.nvim_create_user_command('BD', 'bufdo bd', {})
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -604,6 +606,7 @@ require('lazy').setup({
         pylsp = {},
         -- ts_ls = {},
 
+        jsonls = {},
         lua_ls = {
           -- cmd = {...},
           -- filetypes = { ...},
@@ -830,6 +833,8 @@ require('lazy').setup({
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+
+  { 'github/copilot.vim' },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
