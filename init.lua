@@ -289,10 +289,58 @@ require('lazy').setup({
       vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
       vim.o.foldlevelstart = 99
       vim.o.foldenable = true
+    end,
+  },
 
-      -- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
-      -- vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
-      -- vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+  {
+    'olimorris/codecompanion.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'hrsh7th/nvim-cmp', -- Optional: For using slash commands and variables in the chat buffer
+      'nvim-telescope/telescope.nvim', -- Optional: For using slash commands
+      { 'MeanderingProgrammer/render-markdown.nvim', ft = { 'markdown', 'codecompanion' } }, -- Optional: For prettier markdown rendering
+      { 'stevearc/dressing.nvim', opts = {} }, -- Optional: Improves `vim.ui.select`
+    },
+    config = function()
+      require('codecompanion').setup {
+        adapters = {
+          strategies = {
+            chat = {
+              adapter = 'anthropic',
+            },
+            inline = {
+              adapter = 'copilot',
+            },
+          },
+          anthropic = function()
+            return require('codecompanion.adapters').extend('anthropic', {
+              env = {
+                api_key = 'cmd:op read op://private/llm/anthropic --no-newline',
+              },
+            })
+          end,
+        },
+      }
+
+      vim.api.nvim_set_keymap('n', '<C-a>', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true, desc = 'Code [C]ompanion [A]ctions' })
+      vim.api.nvim_set_keymap('v', '<C-a>', '<cmd>CodeCompanionActions<cr>', { noremap = true, silent = true, desc = 'Code [C]ompanion [A]ctions' })
+      vim.api.nvim_set_keymap(
+        'n',
+        '<LocalLeader>a',
+        '<cmd>CodeCompanionChat Toggle<cr>',
+        { noremap = true, silent = true, desc = 'Toggle Code Companion Ch[a]t' }
+      )
+      vim.api.nvim_set_keymap(
+        'v',
+        '<LocalLeader>a',
+        '<cmd>CodeCompanionChat Toggle<cr>',
+        { noremap = true, silent = true, desc = 'Toggle Code Companion Ch[a]t' }
+      )
+      vim.api.nvim_set_keymap('v', 'ga', '<cmd>CodeCompanionChat Add<cr>', { noremap = true, silent = true, desc = 'Code Companion Chat [A]dd' })
+
+      -- Expand 'cc' into 'CodeCompanion' in the command line
+      vim.cmd [[cab cc CodeCompanion]]
     end,
   },
 
@@ -689,10 +737,11 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'isort', 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        typescript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -834,7 +883,27 @@ require('lazy').setup({
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
-  { 'github/copilot.vim' },
+  {
+    'github/copilot.vim',
+    -- 'zbirenbaum/copilot.lua',
+    -- event = 'InsertEnter',
+    -- opts = {
+    --   suggestion = {
+    --     enabled = true,
+    --     auto_trigger = true,
+    --     hide_during_completion = true,
+    --     -- debounce = 75,
+    --     -- keymap = {
+    --     --   -- accept = '<C-y>',
+    --     --   accept_word = false,
+    --     --   accept_line = false,
+    --     --   next = '<M-]>',
+    --     --   prev = '<M-[>',
+    --     --   dismiss = '<C-]>',
+    --     -- },
+    --   },
+    -- },
+  },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -925,6 +994,7 @@ require('lazy').setup({
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
+  --
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
