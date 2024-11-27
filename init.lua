@@ -12,6 +12,9 @@ vim.g.have_nerd_font = true
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+-- TODO: maybe rename virtualenv to nvim
+vim.g.python3_host_prog = vim.fn.expand '~/.virtualenvs/molten-nvim/bin/python3'
+
 vim.opt.number = true
 vim.opt.relativenumber = true
 
@@ -112,6 +115,15 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.highlight.on_yank()
+  end,
+})
+
+-- save file on focus lost or buffer change
+vim.api.nvim_create_autocmd('FocusLost', {
+  desc = 'Save file on focus lost or buffer change',
+  group = vim.api.nvim_create_augroup('kickstart-autosave', { clear = true }),
+  callback = function()
+    vim.cmd 'silent! wall'
   end,
 })
 
@@ -857,6 +869,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'otter' },
         },
       }
     end,
@@ -905,6 +918,176 @@ require('lazy').setup({
     -- },
   },
 
+  {
+    'quarto-dev/quarto-nvim',
+    event = 'VimEnter',
+    ft = { 'quarto', 'markdown', 'qmd' },
+    -- opts = {
+    --   lspFeatures = {
+    --     -- NOTE: put whatever languages you want here:
+    --     languages = { 'r', 'python', 'rust' },
+    --     chunks = 'all',
+    --     diagnostics = {
+    --       enabled = true,
+    --       triggers = { 'BufWritePost' },
+    --     },
+    --     completion = {
+    --       enabled = true,
+    --     },
+    --   },
+    --   codeRunner = {
+    --     enabled = true,
+    --     default_method = 'molten',
+    --     ft_runners = {},
+    --     never_run = { 'yaml' },
+    --   },
+    -- },
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'jmbuhr/otter.nvim',
+      {
+        'benlubas/molten-nvim',
+        dependencies = {
+          {
+            '3rd/image.nvim',
+            opts = {
+
+              backend = 'kitty',
+              integrations = {
+                markdown = {
+                  enabled = true,
+                  clear_in_insert_mode = false,
+                  download_remote_images = true,
+                  only_render_image_at_cursor = false,
+                  filetypes = { 'markdown', 'vimwiki', 'quarto' }, -- markdown extensions (ie. quarto) can go here
+                },
+                neorg = {
+                  enabled = true,
+                  filetypes = { 'norg' },
+                },
+                typst = {
+                  enabled = true,
+                  filetypes = { 'typst' },
+                },
+                html = {
+                  enabled = false,
+                },
+                css = {
+                  enabled = false,
+                },
+              },
+              max_width = 100,
+              max_height = 12,
+              max_height_window_percentage = math.huge,
+              max_width_window_percentage = math.huge,
+              window_overlap_clear_enabled = true,
+              window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+              editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+              tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+              hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
+            },
+          },
+        },
+        build = ':UpdateRemotePlugins',
+        init = function()
+          vim.g.molten_image_provider = 'image.nvim'
+          vim.g.molten_use_border_highlights = true
+
+          vim.g.molten_auto_open_output = false
+          vim.g.molten_output_show_more = true
+          vim.g.molten_output_win_border = { '', '━', '', '' }
+          vim.g.molten_output_win_max_height = 25
+          vim.g.molten_output_virt_lines = true
+          vim.g.molten_virt_text_output = true
+          vim.g.molten_use_border_highlights = true
+          vim.g.molten_virt_lines_off_by_1 = true
+          vim.g.molten_wrap_output = true
+          vim.g.molten_tick_rate = 175
+          vim.g.molten_auto_image_popup = true
+
+          -- don't change the mappings (unless it's related to your bug)
+          vim.keymap.set('n', '<localleader>mi', ':MoltenInit<CR>', { desc = '[M]olten [I]nit' })
+          vim.keymap.set('n', '<localleader>e', ':MoltenEvaluateOperator<CR>', { desc = '[E]valuate' })
+          vim.keymap.set('n', '<localleader>rr', ':MoltenReevaluateCell<CR>', { desc = '[R]e[E]valuate [R]un' })
+          vim.keymap.set('v', '<localleader>r', ':<C-u>MoltenEvaluateVisual<CR>gv', { desc = '[R]un' })
+          vim.keymap.set('n', '<localleader>os', ':noautocmd MoltenEnterOutput<CR>', { desc = '[O]utput [S]how' })
+          vim.keymap.set('n', '<localleader>oh', ':MoltenHideOutput<CR>', { desc = '[O]utput [H]ide' })
+          vim.keymap.set('n', '<localleader>md', ':MoltenDelete<CR>', { desc = '[M]olten [D]elete' })
+
+          -- change the configuration when editing a python file
+          vim.api.nvim_create_autocmd('BufEnter', {
+            pattern = '*.py',
+            callback = function(e)
+              if string.match(e.file, '.otter.') then
+                return
+              end
+              if require('molten.status').initialized() == 'Molten' then
+                vim.fn.MoltenUpdateOption('molten_virt_text_output', false)
+                vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', false)
+              end
+            end,
+          })
+          -- Undo those config changes when we go back to a markdown or quarto file
+          vim.api.nvim_create_autocmd('BufEnter', {
+            pattern = { '*.qmd', '*.md', '*.ipynb' },
+            callback = function()
+              if require('molten.status').initialized() == 'Molten' then
+                vim.fn.MoltenUpdateOption('molten_virt_lines_off_by_1', true)
+                vim.fn.MoltenUpdateOption('molten_virt_text_output', true)
+              end
+            end,
+          })
+
+          vim.keymap.set('n', '<localleader>ip', function()
+            local venv = os.getenv 'VIRTUAL_ENV' or os.getenv 'CONDA_PREFIX'
+            if venv ~= nil then
+              -- in the form of /home/benlubas/.virtualenvs/VENV_NAME
+              venv = string.match(venv, '/.+/(.+)')
+              vim.cmd(('MoltenInit %s'):format(venv))
+            else
+              vim.cmd 'MoltenInit python3'
+            end
+          end, { silent = true, desc = '[I]nit Molten for [P]ython3' })
+        end,
+      },
+    },
+    config = function()
+      require('quarto').setup {
+        debug = false,
+        closePreviewOnExit = true,
+        lspFeatures = {
+          enabled = true,
+          chunks = 'curly',
+          languages = nil, -- nil means all languages found in the document
+          diagnostics = {
+            enabled = true,
+            triggers = { 'BufWritePost' },
+          },
+          completion = {
+            enabled = true,
+          },
+        },
+        codeRunner = {
+          enabled = true,
+          default_method = 'molten', -- "molten" or "slime"
+          ft_runners = {}, -- filetype to runner, ie. `{ python = "molten" }`.
+          -- Takes precedence over `default_method`
+          never_run = { 'yaml' }, -- filetypes which are never sent to a code runner
+        },
+      }
+
+      local runner = require 'quarto.runner'
+      vim.keymap.set('n', '<localleader>rc', runner.run_cell, { desc = 'run cell', silent = true })
+      vim.keymap.set('n', '<localleader>ra', runner.run_above, { desc = 'run cell and above', silent = true })
+      vim.keymap.set('n', '<localleader>rA', runner.run_all, { desc = 'run all cells', silent = true })
+      vim.keymap.set('n', '<localleader>rl', runner.run_line, { desc = 'run line', silent = true })
+      vim.keymap.set('v', '<localleader>r', runner.run_range, { desc = 'run visual range', silent = true })
+      vim.keymap.set('n', '<localleader>RA', function()
+        runner.run_all(true)
+      end, { desc = 'run all cells of all languages', silent = true })
+    end,
+  },
+
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
     config = function()
@@ -942,6 +1125,7 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
+
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
@@ -959,6 +1143,42 @@ require('lazy').setup({
         additional_vim_regex_highlighting = { 'ruby' },
       },
       indent = { enable = true, disable = { 'ruby' } },
+
+      textobjects = {
+        move = {
+          enable = true,
+          set_jumps = false, -- you can change this if you want.
+          goto_next_start = {
+            --- ... other keymaps
+            [']b'] = { query = '@code_cell.inner', desc = 'next code block' },
+          },
+          goto_previous_start = {
+            --- ... other keymaps
+            ['[b'] = { query = '@code_cell.inner', desc = 'previous code block' },
+          },
+        },
+        select = {
+          enable = true,
+          lookahead = true, -- you can change this if you want
+          keymaps = {
+            --- ... other keymaps
+            ['ib'] = { query = '@code_cell.inner', desc = 'in block' },
+            ['ab'] = { query = '@code_cell.outer', desc = 'around block' },
+          },
+        },
+        swap = { -- Swap only works with code blocks that are under the same
+          -- markdown header
+          enable = true,
+          swap_next = {
+            --- ... other keymap
+            ['<leader>sbl'] = '@code_cell.outer',
+          },
+          swap_previous = {
+            --- ... other keymap
+            ['<leader>sbh'] = '@code_cell.outer',
+          },
+        },
+      },
     },
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
